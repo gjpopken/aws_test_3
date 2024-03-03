@@ -108,22 +108,23 @@ router.post('/', upload.single('file'), async (req, res) => {
 
 router.put('/:id', upload.single('file'), async (req, res) => {
     const connection = await pool.connect()
-    if (req.file) {
-        console.log(req.file);
-        try {
-            await connection.query("BEGIN")
+    try {
+        await connection.query("BEGIN")
 
-            // I'm putting the pool query first so that if the AWS upload fails,
-            // the UPDATE can still be rolled back.
-            const queryText = `
+        // I'm putting the pool query first so that if the AWS upload fails,
+        // the UPDATE can still be rolled back.
+        const queryText = `
             UPDATE "evidence" 
             SET "title" = $1,
-            "notes" = $2,
-            "media_type" = $3 
-            WHERE "id" = $4; 
+            "notes" = $2
+            WHERE "id" = $3; 
             `
-            const queryParams = [req.body.title, req.body.notes, req.file.mimetype, req.params.id]
-            await connection.query(queryText, queryParams)
+        const queryParams = [req.body.title, req.body.notes, req.params.id]
+        await connection.query(queryText, queryParams)
+
+        // If there's a new file, we want it to go to AWS
+        if (req.file) {
+            await connection.query(`UPDATE "evidence" SET "media_type" = $1 WHERE "id" = $2`, [req.file.mimetype, req.params.id])
 
             // We need the original name that the image was uploaded to AWS with
             // so it knows which to replace.
@@ -140,17 +141,16 @@ router.put('/:id', upload.single('file'), async (req, res) => {
             }
             const command = new aws.PutObjectCommand(params)
             await s3.send(command)
-            await connection.query("COMMIT")
-            res.sendStatus(201)
-        } catch (error) {
-            await connection.query("ROLLBACK")
-            console.log(error);
-            res.sendStatus(500)
-        } finally {
-            connection.release()
         }
-    } else {
 
+        await connection.query("COMMIT")
+        res.sendStatus(201)
+    } catch (error) {
+        await connection.query("ROLLBACK")
+        console.log(error);
+        res.sendStatus(500)
+    } finally {
+        connection.release()
     }
 })
 
