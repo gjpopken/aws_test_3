@@ -58,9 +58,22 @@ router.post('/', upload.single('file'), async (req, res) => {
     try {
         // sending the command to AWS
         await s3.send(command)
-        res.sendStatus(201)
+
+        const queryText = `
+        INSERT INTO "evidence" ("title", "notes", "file_url", "user_id", "media_type")
+        VALUES ($1, $2, $3, $4, $5);
+        `
+        const queryParams = [req.body.title, req.body.notes, req.file.originalname, req.body.user_id, req.file.mimetype]
+        pool.query(queryText, queryParams)
+        .then(result => {
+            res.sendStatus(201)
+        }).catch(err => {
+            console.log("Error with Pool:", err);
+            res.sendStatus(500)
+        })
+        
     } catch (error) {
-        console.log('Here is the error: ', error);
+        console.log('Here is the error from AWS: ', error);
         res.sendStatus(500)
     }
 
