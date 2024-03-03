@@ -154,4 +154,37 @@ router.put('/:id', upload.single('file'), async (req, res) => {
     }
 })
 
+router.delete('/:id', async (req, res) => {
+    const connection = await pool.connect()
+    try {
+        await connection.query("BEGIN")
+        const queryText = `
+        DELETE FROM "evidence" WHERE "id" = $1
+        RETURNING "media_type", "file_url";
+        `
+        const result = await connection.query(queryText, [req.params.id])
+        console.log(result.rows);
+        const media_type = result.rows[0].media_type
+        const aws_reference = result.rows[0].file_url
+
+        // If we're delete just text from the DB, we don't need to ping AWS
+        if (media_type !== 'text') {
+            const command = new aws.DeleteObjectCommand({
+                Bucket: bucketName,
+                Key: aws_reference,
+            })
+            await s3.send(command)
+        }
+        
+        await connection.query("COMMIT")
+        res.sendStatus(201)
+    } catch (error) {
+        console.log(error);
+        await connection.query("ROLLBACK")
+        res.sendStatus(500)
+    } finally {
+        connection.release()
+    }
+})
+
 module.exports = router;
