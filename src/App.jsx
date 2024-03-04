@@ -19,13 +19,8 @@ function App() {
     formData.append('user_id', 2)
     formData.append('file', file)
     // console.log(formData);
-    // postNewEvidence(formData)
-    axios.post('/api/evidence', formData)
-      .then(response => {
-        console.log('Successful POST');
-      }).catch(err => {
-        console.log("Error with POST", err);
-      })
+    postNewEvidence(formData)
+
   }
 
   const getAllUploads = () => {
@@ -39,9 +34,14 @@ function App() {
       })
   }
 
-  // const postNewEvidence = (formData) => {
-
-  // }
+  const postNewEvidence = (formData) => {
+    axios.post('/api/evidence', formData)
+      .then(response => {
+        console.log('Successful POST');
+      }).catch(err => {
+        console.log("Error with POST", err);
+      })
+  }
 
   useEffect(() => {
     getAllUploads()
@@ -51,7 +51,6 @@ function App() {
 
   return (
     <>
-      {/* <p>{file}</p> */}
       <p>
         <label htmlFor="titleInput">Enter Title: </label>
         <input type="text" id='titleInput'
@@ -64,9 +63,9 @@ function App() {
           onChange={(e) => setNotesInput(e.target.value)}
           value={notesInput} />
       </p>
+      {/* //! Files are stored in different place in the event.target. */}
       <input type="file" accept='audio/*,video/*,image/*' capture='user'
-        onChange={(e) => {setFile(e.target.files[0]);console.log(JSON.stringify(e.target.files));}
-        }
+        onChange={(e) => { setFile(e.target.files[0]) }}
       />
       <button onClick={handleSubmit} disabled={!file}>Submit</button>
       {uploads.map(item => {
