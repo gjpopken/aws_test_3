@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
 
 // --------------upload.single is the multer middleware
 router.post('/', upload.single('file'), async (req, res) => {
-    console.log(req.file);
+    console.log('Req.file', req.file)
 
     // The keys Bucket, Key, Body, and ContentType all keys AWS needs
     // to help identify and store the file.
@@ -175,7 +175,7 @@ router.delete('/:id', async (req, res) => {
             })
             await s3.send(command)
         }
-        
+
         await connection.query("COMMIT")
         res.sendStatus(201)
     } catch (error) {
